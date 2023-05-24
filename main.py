@@ -4,6 +4,7 @@ import sys
 import argparse
 import requests
 import base64
+import git
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -87,18 +88,23 @@ def update_spy_list(repo_name, ssh_url):
         print(f"Response text: {response.text}")
 
 
-def push_to_github(repo_path, ssh_url):
-    """
-    Push local repository to the newly created GitHub repository.
-    """
-    print(f"Attempting to push local repository {repo_path} to GitHub...")
-    push_command = f"cd {repo_path} && git remote add origin {ssh_url} && git push -u origin master"
-    push_status = os.system(push_command)
+def push_to_github(repo_path, github_url):
+    # リポジトリを取得
+    repo = git.Repo(repo_path)
 
-    if push_status == 0:
+    # リモート名を定義
+    remote_name = "temp_remote"
+
+    # リモートがすでに存在するか確認し、存在しなければ追加
+    if remote_name not in [remote.name for remote in repo.remotes]:
+        repo.create_remote(remote_name, url=github_url)
+
+    try:
+        # GitHubへプッシュ
+        repo.git.push(remote_name, "HEAD:master")
         print(f"Successfully pushed {repo_path} to GitHub.")
-    else:
-        print(f"Failed to push {repo_path} to GitHub.")
+    except git.GitCommandError as error:
+        print(f"Failed to push {repo_path} to GitHub. Error: {error}")
 
 
 def main():
@@ -121,13 +127,21 @@ def main():
 
     for repo_name in os.listdir(dir_path):
         repo_path = os.path.join(dir_path, repo_name)
-        if os.path.isdir(repo_path) and ".git" in os.listdir(repo_path):
+        # If the directory itself is a git repository
+        if ".git" in os.listdir(dir_path):
+            print(f"\nProcessing repository {dir_path}...")
+            ssh_url = create_github_repo(dir_path)
+            if ssh_url:
+                push_to_github(dir_path, ssh_url)
+                update_spy_list(dir_path, ssh_url)
+            break
+        # If the sub-directory is a git repository
+        elif os.path.isdir(repo_path) and ".git" in os.listdir(repo_path):
             print(f"\nProcessing repository {repo_name}...")
             ssh_url = create_github_repo(repo_name)
             if ssh_url:
                 push_to_github(repo_path, ssh_url)
                 update_spy_list(repo_name, ssh_url)
-
     print("\nProcessing completed. Exiting program.")
 
 
