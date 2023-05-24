@@ -49,26 +49,6 @@ def create_github_repo(repo_name):
     response = send_github_request("/user/repos", "POST", headers, data)
 
     if response.status_code == 201:
-        print(f"Successfully created repository SPY-{repo_name}")
-        return response.json()["ssh_url"]
-    else:
-        print(f"ERROR: Failed to create repository SPY-{repo_name}")
-        # Print full response content for debugging
-        print(f"Full response content: {response.content}")
-
-        return None
-
-    """
-    Create a new GitHub repository.
-    """
-    headers = {
-        "Authorization": "token " + GITHUB_TOKEN,
-        "Accept": "application/vnd.github.v3+json",
-    }
-    data = {"name": "SPY-" + repo_name, "private": True}
-    response = send_github_request("/user/repos", "POST", headers, data)
-
-    if response.status_code == 201:
         ssh_url = response.json()["ssh_url"]
         print(f"Successfully created repository SPY-{repo_name}")
         print(f"Repository owner: {USERNAME}")
